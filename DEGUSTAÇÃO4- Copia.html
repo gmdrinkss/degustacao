@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GMDrinks - VIP Experience</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #050505;
+            --gold: #d4af37;
+            --gold-light: #f9d976;
+            --netflix-red: #E50914;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: #ffffff;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .brand-font { font-family: 'Playfair Display', serif; }
+        .text-gold { color: var(--gold); }
+        .bg-gold { background-color: var(--gold); }
+        
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        @keyframes slowPan {
+            0% { transform: scale(1) translate(0, 0); }
+            50% { transform: scale(1.05) translate(-1%, 2%); }
+            100% { transform: scale(1) translate(0, 0); }
+        }
+        .animate-pan { animation: slowPan 25s ease-in-out infinite; }
+
+        .glass-panel {
+            background: rgba(10, 10, 10, 0.85);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(212, 175, 55, 0.15);
+        }
+
+        .drink-card {
+            transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.4s ease, z-index 0.4s ease;
+            transform-origin: center center;
+            will-change: transform;
+        }
+        /* No desktop, o hover expande o card. Em telas touch, a própria engine lida melhor com isso. */
+        @media (hover: hover) and (pointer: fine) {
+            .drink-card:hover {
+                transform: scale(1.10) translateY(-5px);
+                z-index: 50;
+                box-shadow: 0 20px 40px rgba(0,0,0,0.9), 0 0 20px rgba(212, 175, 55, 0.2);
+            }
+        }
+
+        .fade-out { opacity: 0; visibility: hidden; transition: opacity 0.8s ease, visibility 0.8s; }
+        .selected-ring { border: 2px solid var(--gold); box-shadow: 0 0 15px rgba(212, 175, 55, 0.5); }
+        
+        #video-modal, #selection-drawer { transition: opacity 0.3s ease; }
+        #drawer-content { transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+
+        /* NOVO: Efeito Folha de Ouro Animada */
+        @keyframes shine {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
+        }
+        .gold-shine-btn {
+            background: linear-gradient(90deg, #d4af37 0%, #f9d976 25%, #fff 50%, #f9d976 75%, #d4af37 100%);
+            background-size: 200% auto;
+            color: #000;
+            animation: shine 3s linear infinite;
+            box-shadow: 0 10px 30px rgba(212,175,55,0.4);
+        }
+        .whatsapp-shine-btn {
+            background: linear-gradient(90deg, #128C7E 0%, #25D366 25%, #fff 50%, #25D366 75%, #128C7E 100%);
+            background-size: 200% auto;
+            animation: shine 3s linear infinite;
+            box-shadow: 0 10px 30px rgba(37,211,102,0.4);
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- 1. TELA DE LOGIN VIP -->
+    <div id="auth-screen" class="fixed inset-0 z-[100] flex flex-col items-center justify-center p-4">
+        <div class="absolute inset-0 z-0 overflow-hidden">
+            <img src="https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&q=80&w=1920" class="w-full h-full object-cover opacity-30 animate-pan" alt="Background">
+            <div class="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-black/30"></div>
+        </div>
+
+        <div class="glass-panel relative z-10 w-full max-w-sm p-8 rounded-3xl text-center shadow-[0_25px_50px_-12px_rgba(0,0,0,1)]">
+            <h1 class="brand-font text-4xl text-gold mb-1 tracking-widest uppercase">GMDrinks</h1>
+            <p class="text-[9px] uppercase tracking-[0.3em] text-gray-400 mb-8 font-bold">Portal de Degustação</p>
+            
+            <p class="text-xs text-gray-300 mb-6 font-light">Insira suas credenciais exclusivas.</p>
+            
+            <div class="space-y-4">
+                <input type="text" id="vip-user" placeholder="Login (Ex: casal)" class="w-full px-4 py-3 rounded-xl text-sm bg-black/50 border border-white/10 text-white focus:border-[#d4af37] focus:outline-none transition-colors">
+                <input type="password" id="vip-pass" placeholder="Senha (Ex: 123)" class="w-full px-4 py-3 rounded-xl text-sm bg-black/50 border border-white/10 text-white focus:border-[#d4af37] focus:outline-none transition-colors">
+            </div>
+
+            <p id="error-msg" class="text-red-500 text-[10px] uppercase font-bold tracking-widest mt-3 hidden">Acesso Negado</p>
+
+            <button onclick="window.loginVIP()" class="w-full mt-6 gold-shine-btn font-black uppercase text-xs tracking-widest py-4 rounded-xl hover:scale-105 transition-transform duration-300">
+                Acessar Portal
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. PLATAFORMA PRINCIPAL -->
+    <div id="main-platform" class="hidden min-h-screen relative pb-20">
+        
+        <!-- Navbar -->
+        <nav class="fixed top-0 w-full z-40 bg-gradient-to-b from-black/95 to-transparent pt-6 pb-10 px-4 md:px-12 flex justify-between items-center transition-all duration-300" id="navbar">
+            <h1 class="brand-font text-2xl md:text-3xl text-gold tracking-widest uppercase">GMDrinks</h1>
+            <div class="flex items-center gap-4">
+                <!-- NOVO: Botão de Compartilhar/QR Code -->
+                <button onclick="window.showQRCode()" class="flex items-center justify-center p-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 transition-colors backdrop-blur-md" title="Mostrar QR Code do Menu">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+                </button>
+                
+                <button onclick="window.toggleDrawer()" class="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full backdrop-blur-md border border-white/10 transition-colors">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    <span class="text-xs text-white uppercase tracking-widest font-bold hidden md:block">Sua Lista</span>
+                    <span id="cart-counter" class="bg-gold text-black text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full transition-transform">0</span>
+                </button>
+                <div class="w-8 h-8 rounded-full border border-gold/50 flex items-center justify-center bg-black/50 backdrop-blur-sm hidden md:flex">
+                    <span class="text-gold text-xs font-bold">VIP</span>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Hero Section -->
+        <header class="relative h-[75vh] md:h-[85vh] w-full flex items-end pb-20 px-4 md:px-12 overflow-hidden">
+            <div class="absolute inset-0 z-0">
+                <img src="https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&q=80&w=1920" class="w-full h-full object-cover animate-pan" alt="Moscow Mule Destaque">
+                <div class="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent"></div>
+                <div class="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/60 to-transparent"></div>
+            </div>
+
+            <div class="relative z-10 max-w-2xl">
+                <span class="text-[10px] md:text-xs text-gold uppercase tracking-[0.4em] font-black drop-shadow-lg mb-2 block">Top 10 do Mês</span>
+                <h2 class="brand-font text-6xl md:text-8xl font-bold text-white mb-4 drop-shadow-2xl leading-none">Moscow<br>Mule</h2>
+                <p class="text-sm md:text-base text-gray-300 max-w-md mb-6 drop-shadow-md line-clamp-3">A perfeita harmonia entre a leveza da vodka, a refrescância cítrica do limão e a nossa espuma artesanal de gengibre picante. O drink mais pedido dos casamentos modernos.</p>
+                
+                <div class="flex gap-3 md:gap-4">
+                    <button onclick="window.playVideo('moscow-mule-hero')" class="bg-white text-black px-6 md:px-8 py-2 md:py-3 rounded text-xs md:text-sm font-bold flex items-center gap-2 hover:bg-gray-200 transition-colors">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4l12 6-12 6z"/></svg> Assistir Preparo
+                    </button>
+                    <button onclick="window.toggleSelection('Moscow Mule')" class="bg-gray-500/50 backdrop-blur-md text-white px-6 md:px-8 py-2 md:py-3 rounded text-xs md:text-sm font-bold border border-white/20 hover:bg-gray-500/70 transition-colors flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> Minha Lista
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Container de Carrosséis -->
+        <main class="relative z-20 -mt-10 space-y-12" id="catalog-container">
+            <!-- Injetado via JS -->
+        </main>
+    </div>
+
+    <!-- 3. MODAL DE VÍDEO (Estilo Netflix Player) -->
+    <div id="video-modal" class="fixed inset-0 z-[150] bg-black/95 backdrop-blur-sm hidden flex-col items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <button onclick="window.closeVideo()" class="absolute top-6 right-6 md:top-10 md:right-10 text-white hover:text-gold transition-colors z-10">
+            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+        
+        <div id="video-wrapper" class="w-full max-w-5xl relative aspect-video bg-gray-900 rounded-xl overflow-hidden shadow-[0_0_50px_rgba(212,175,55,0.2)]">
+            <!-- O conteúdo será injetado pelo JavaScript (Vídeo ou Iframe) -->
+        </div>
+        
+        <div class="mt-6 text-center">
+            <h3 id="video-title" class="brand-font text-3xl md:text-5xl text-gold mb-2 drop-shadow-md">Nome do Drink</h3>
+            <p id="video-desc" class="text-xs md:text-sm text-gray-200 max-w-xl drop-shadow-md">Descrição do drink...</p>
+        </div>
+    </div>
+
+    <!-- 4. GAVETA DE SELEÇÃO (Minha Lista & Envio para WhatsApp) -->
+    <div id="selection-drawer" class="fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm hidden opacity-0">
+        <div id="drawer-content" class="absolute top-0 right-0 h-full w-full md:w-[450px] glass-panel shadow-2xl border-l border-white/10 p-6 flex flex-col translate-x-full">
+            
+            <div class="flex justify-between items-center mb-8 border-b border-white/10 pb-4">
+                <div>
+                    <h2 class="brand-font text-2xl text-gold uppercase tracking-widest">Sua Degustação</h2>
+                    <p class="text-[10px] text-gray-400 uppercase tracking-widest mt-1">Drinks Selecionados</p>
+                </div>
+                <button onclick="window.toggleDrawer()" class="text-gray-400 hover:text-white p-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <div id="selected-list" class="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
+                <!-- Drinks selecionados renderizados aqui -->
+            </div>
+
+            <div class="mt-8 pt-6 border-t border-white/10">
+                <button onclick="window.sendToWhatsApp()" class="w-full whatsapp-shine-btn text-black font-black uppercase text-xs tracking-widest py-4 rounded-xl hover:scale-[1.02] transition-transform flex items-center justify-center gap-3">
+                    <svg class="w-5 h-5 text-black" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                    Enviar para o Mixologista
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. MODAL DE QR CODE (NOVO) -->
+    <div id="qr-modal" class="fixed inset-0 z-[200] bg-black/95 backdrop-blur-sm hidden flex-col items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <button onclick="window.closeQRCode()" class="absolute top-6 right-6 md:top-10 md:right-10 text-white hover:text-gold transition-colors z-10">
+            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+        
+        <div class="glass-panel p-8 md:p-12 rounded-3xl flex flex-col items-center text-center max-w-sm w-full shadow-[0_25px_50px_-12px_rgba(212,175,55,0.15)] relative">
+            <h2 class="brand-font text-3xl text-gold uppercase tracking-widest mb-2">Acesso VIP</h2>
+            <p class="text-xs text-gray-300 mb-8 font-light">Escaneie para abrir este menu no seu dispositivo.</p>
+            
+            <div class="bg-white p-4 rounded-xl mb-8 shadow-[0_0_30px_rgba(212,175,55,0.3)]">
+                <img id="qr-code-img" src="" alt="QR Code" class="w-56 h-56 object-contain">
+            </div>
+            
+            <button onclick="window.copyMenuLink()" class="w-full bg-white/10 text-white border border-white/20 py-4 rounded-xl text-[10px] uppercase font-black tracking-widest hover:bg-white/20 transition-colors flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                Copiar Link do Menu
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURAÇÃO: Seu WhatsApp Oficial
+        const WHATSAPP_NUMBER = "5531983684231"; 
+
+        // BANCO DE DADOS COMPLETO DE DRINKS
+        // NOTA: Para trocar o vídeo, basta alterar o link em "video:"
+        const DRINK_CATALOG = [
+            {
+                categoryTitle: "A Alta Coquetelaria (Premium)",
+                drinks: [
+                    { id: "negroni", name: "Negroni", desc: "Campari, gim, vermute rosso, Guarnição laranja e gelo.", img: "https://conteudo.imguol.com.br/c/entretenimento/73/2020/09/10/negroni-1599771396384_v2_3x4.jpg", video: "./videos/negroni.mp4" },
+                    { id: "aperol", name: "Aperol Spritz", desc: "Espumante, aperol, agua com gás ou sprite, e gelo.", img: "https://static.wixstatic.com/media/a037bb_2d6d3e0e33144a24a84e97335b6a309c~mv2.jpg/v1/fill/w_480,h_638,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/a037bb_2d6d3e0e33144a24a84e97335b6a309c~mv2.jpg", video: "./videos/aperol.mp4" },
+                    { id: "soda-italiana", name: "Soda Italiana", desc: "Xaropes monin diversos, com agua com gás e gelo.", img: "https://resize.casapino.com.br/?u=https://cms-bomgourmet.s3.amazonaws.com/bomgourmet/2018/03/201803/liquori-soda-italiana-e2a4f9e0.jpg&w=661", video: "./videos/soda.mp4" },
+                    { id: "whisky-sour", name: "Whisky Sour", desc: "Whisky, suco de limão siciliano, xarope trad. e gelo.", img: "https://blog-distiller.imgix.net/wp-content/uploads/2018/08/24143617/whiskeysourADOBE.jpg?", video: "./videos/whiskysour.mp4" },
+                    { id: "whisky-gelo", name: "Whisky com Gelo", desc: "Whisky selecionado e gelo.", img: "https://i.pinimg.com/474x/01/00/6d/01006d7987b4a31366abffc646d2302c.jpg", video: "./videos/whiskygelo.mp4" },
+                    { id: "garibaldi", name: "Garibaldi", desc: "Campari & Suco de Laranja e Gelo", img: "https://www.estadao.com.br/resizer/OuWF2B0C6CIxMZMWfQ6Q6QBlwjU=/arc-anglerfish-arc2-prod-estadao/public/PLGD23C32VJXXNE6T6AWNTUOGQ.jpg", video: "./videos/garibaldi.mp4" },
+                    { id: "dry-martini", name: "Dry Martini", desc: "Gim, Vermute Seco", img: "https://cdn.casaeculinaria.com/wp-content/uploads/2024/02/09100159/dry-martini.webp", video: "./videos/drymartini.mp4" },
+                    { id: "cuba-libre", name: "Cuba Libre", desc: "Rum, Cola Cola, limão e gelo", img: "https://res.cloudinary.com/cocktailarium/image/private/f_auto/b_auto:border_gradient:4,c_pad,h_432,w_648/q_100/v1/cocktails/CUBA_LIBRE_1_lkaoaw", video: "./videos/cubalibre.mp4" }
+                ]
+            },
+            {
+                categoryTitle: "Clássicos Favoritos",
+                drinks: [
+                    { id: "gin-tonica", name: "Gin Tônica", desc: "Gin, limão, agua tônica, especiarias e gelo.", img: "https://canaldareceita.com.br/wp-content/uploads/2025/02/GIN-TONICA.jpg", video: "./videos/gintonica.mp4" },
+                    { id: "moscow-mule", name: "Moscow Mule", desc: "Vodka, suco de limão, gengibre, espuma de gengibre, sprite e gelo.", img: "https://blogs.correiobraziliense.com.br/lianasabo/wp-content/uploads/sites/25/2022/03/WhatsApp-Image-2022-03-17-at-17.41.24-550x524.jpeg", video: "./videos/moscow.mp4" },
+                    { id: "mojito", name: "Mojito", desc: "Rum, hortelã, xarope de menta, suco de limão, sprite e gelo.", img: "https://www.deliciousmagazine.co.uk/wp-content/uploads/2014/01/Mojito-768x960.jpg", video: "./videos/mojito.mp4" },
+                    { id: "sex-on-the-beach", name: "Sex on the Beach", desc: "Vodka, licor de pessêgo, suco de laranja, grenadine, laranja.", img: "https://thumbs.dreamstime.com/b/sexo-no-cocktail-da-praia-fundo-preto-115887247.jpg", video: "./videos/sexonthebeach.mp4" },
+                    { id: "pina-colada", name: "Pina Colada", desc: "Rum, abacaxi, leite de cocô, leite condensado, e gelo.", img: "https://p2.trrsf.com/image/fget/cf/1200/900/middle/images.terra.com/2022/09/23/1631063638-receita-pina-colada.jpg", video: "./videos/pinacolada.mp4" },
+                    { id: "cogumelo-azul", name: "Cogumelo Azul", desc: "Gin, curaçau blue, limão, sprite e gelo.", img: "https://bartenderstore.com.br/wp-content/uploads/2023/08/Gin-Tonica-Azul-edit.jpg", video: "./videos/azul.mp4" },
+                    { id: "nectar", name: "Nectar", desc: "Vodka, licor de morango, leite condensado, suco de morango.", img: "https://cdn.deliway.com.br/blog/base/31c/0c1/78a/batidinha-morango.jpg", video: "./videos/nectar.mp4" },
+                    { id: "red-collins", name: "Red Collins", desc: "Gin, xarope de hibisco, limão, agua com gás e gelo.", img: "https://socialbauru.com.br/wp-content/uploads/2026/06/bar-aeroclube-drink-684x1024.jpg", video: "./videos/redcollins.mp4" },
+                    { id: "maracugim", name: "Maracugim", desc: "Gin, maracujá, suco de limão, sprite e gelo.", img: "https://simplifica.efacil.com.br/wp-content/uploads/2025/05/hortela-de-molho-de-maracuja.jpg", video: "./videos/maracuja.mp4" }
+                ]
+            },
+            {
+                categoryTitle: "Tropicais & Autorais",
+                drinks: [
+                    { id: "caip-frutas", name: "Caip Frutas", desc: "Abacaxi, morango, maracujá, abacaxi com hortelã.", img: "https://i.ibb.co/1fywzrkF/Chat-GPT-Image-20-de-mar-de-2026-09-24-24.png", video: "./videos/caips.mp4" },
+                    { id: "tropicall", name: "Tropicall", desc: "Rum ou Gin, abacaxi, hortelã, limão thaitti, suco de laranja e gelo.", img: "https://content.paodeacucar.com/wp-content/uploads/2025/09/caipirinha-abacaxi-hortela.jpg", video: "./videos/tropical.mp4" },
+                    { id: "raisin", name: "Raisin", desc: "Vodka ou cachaça, Uvas, manjerição, açucar, suco de raisin", img: "https://i.pinimg.com/originals/78/57/2a/78572aa9fb9f1611543b1102ffc7f569.jpg", video: "./videos/raisin.mp4" },
+                    { id: "harume", name: "Harumê", desc: "Vodka ou Gin, Creme de abacaxi, Calda de Hibisco, Xarope Trad., Suco de Limão, Hortelã e Gelo", img: "https://mapadacachaca.com.br/wp-content/uploads/2026/03/serenia-coquetel-cachaca-vibra-brasil-optimized.jpg", video: "./videos/harume.mp4" },
+                    { id: "the-vert", name: "Thé vert", desc: "Vodka ou Gin, matte limão ou pessêgo, suco de limão, guaraná e Gelo", img: "https://kanfa.com.br/wp-content/uploads/2021/05/drinks-com-cha-4.jpg", video: "./videos/thevert.mp4" },
+                    { id: "gin-tropical", name: "Gin Tropical", desc: "Gin, Energetico Tropical, Rodelas de limão, alegrim, e Gelo", img: "https://static.wixstatic.com/media/49591c_a5a98e67b69c4c408b2b9948126b9105~mv2.jpg", video: "./videos/gintropical.mp4" },
+                    { id: "alquimia", name: "Alquimia", desc: "Cachaça de canela e cravo, suco de limão, concentrado de maracujá, xarope trad. e Gelo", img: "https://i.pinimg.com/736x/78/e8/ab/78e8ab4883790656d56c0018d1faae8e.jpg", video: "./videos/alquimia.mp4" },
+                    { id: "fakerula", name: "Fakerula", desc: "Amarula Caseila, conhaque, chocolate, creme de leite, leite condensado, leite e gelo", img: "https://conteudo.imguol.com.br/c8/2015/08/21/emarula-1440181194962_1024x768.jpg", video: "./videos/fakerula.mp4" },
+                    { id: "paradise", name: "Paradise", desc: "Rum ou Gin, Suco de Laranja, Grenadine, Suco de Abacaxi, Curaçau Blue e Gelo ", img: "https://i.pinimg.com/736x/43/e8/dd/43e8dd2e1dc58b2b5c3412720f5fca2a.jpg", video: "./videos/paradise.mp4" }
+                ]
+            }
+        ];
+
+        // Flat array para buscas fáceis
+        const ALL_DRINKS = DRINK_CATALOG.reduce((acc, cat) => acc.concat(cat.drinks), []);
+        let selectedDrinks = []; 
+        let orderedDrinks = []; // NOVO: Armazena o que já foi pedido e enviado
+        let drinkRatings = {};  // NOVO: Armazena as notas (estrelas) de cada drink
+
+        // TOAST NOTIFICATION (Aviso de "Adicionado com sucesso")
+        window.showToast = function(message) {
+            let toast = document.getElementById('toast-msg');
+            if(!toast) {
+                toast = document.createElement('div');
+                toast.id = 'toast-msg';
+                toast.className = 'fixed top-24 right-4 md:right-12 bg-white text-black px-6 py-3 rounded-md font-bold shadow-2xl z-[200] transition-opacity duration-300 opacity-0 pointer-events-none text-xs md:text-sm border-l-4 border-gold';
+                document.body.appendChild(toast);
+            }
+            toast.innerText = message;
+            toast.classList.remove('opacity-0');
+            setTimeout(() => toast.classList.add('opacity-0'), 2500);
+        };
+
+        window.showQRCode = function() {
+            const modal = document.getElementById('qr-modal');
+            const qrImg = document.getElementById('qr-code-img');
+            
+            // Pega a URL atual onde o site está hospedado
+            let currentUrl = window.location.href;
+            
+            // Fallback caso esteja rodando localmente/preview (só para não dar erro visual)
+            if(currentUrl.includes('file://') || currentUrl.includes('blob:')) {
+                currentUrl = "https://seusite.com/gmdrinks"; 
+            }
+
+            // Gera o QR code dinamicamente usando uma API gratuita baseada na URL atual
+            qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(currentUrl)}&color=050505&bgcolor=ffffff`;
+            
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+            
+            // Se a gaveta de seleção estiver aberta, fecha ela para mostrar o QR code limpo
+            if(drawerOpen) window.toggleDrawer();
+        };
+
+        window.closeQRCode = function() {
+            const modal = document.getElementById('qr-modal');
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        };
+
+        window.copyMenuLink = function() {
+            let currentUrl = window.location.href;
+            if(currentUrl.includes('file://') || currentUrl.includes('blob:')) {
+                currentUrl = "https://seusite.com/gmdrinks"; 
+            }
+
+            // Tenta copiar para a área de transferência do usuário
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(currentUrl).then(() => {
+                    window.showToast("Link copiado! Compartilhe com os convidados.");
+                });
+            } else {
+                // Fallback para navegadores mais antigos ou sem HTTPS
+                const textArea = document.createElement("textarea");
+                textArea.value = currentUrl;
+                textArea.style.position = "fixed";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    window.showToast("Link copiado! Compartilhe com os convidados.");
+                } catch (err) {
+                    window.showToast("Erro ao copiar o link.");
+                }
+                document.body.removeChild(textArea);
+            }
+        };
+
+        // SISTEMA DE LOGIN
+        window.loginVIP = function() {
+            const user = document.getElementById('vip-user').value;
+            const pass = document.getElementById('vip-pass').value;
+            const errorMsg = document.getElementById('error-msg');
+
+            if(user.length >= 2 && pass.length >= 2) {
+                errorMsg.classList.add('hidden');
+                
+                // NOVO: Animação luxuosa de Boas-Vindas
+                const panel = document.querySelector('.glass-panel');
+                panel.innerHTML = `
+                    <div class="flex flex-col items-center justify-center w-full min-h-[160px]">
+                        <h2 class="brand-font text-3xl md:text-4xl text-gold text-center animate-pulse drop-shadow-[0_0_20px_rgba(212,175,55,0.6)] mb-3">
+                            Bem-vindos,
+                        </h2>
+                        <h3 class="text-white text-xl sm:text-2xl md:text-3xl font-black tracking-widest uppercase text-center break-words w-full leading-snug drop-shadow-md">
+                            ${user}
+                        </h3>
+                        <span class="text-3xl mt-5 block">🥂</span>
+                    </div>`;
+                
+                // Dispara os fogos de artifício luxuosos (Dourado e Branco)
+                var duration = 2.5 * 1000;
+                var end = Date.now() + duration;
+
+                (function frame() {
+                    confetti({
+                        particleCount: 7,
+                        angle: 60,
+                        spread: 55,
+                        origin: { x: 0 },
+                        colors: ['#d4af37', '#f9d976', '#ffffff']
+                    });
+                    confetti({
+                        particleCount: 7,
+                        angle: 120,
+                        spread: 55,
+                        origin: { x: 1 },
+                        colors: ['#d4af37', '#f9d976', '#ffffff']
+                    });
+
+                    if (Date.now() < end) {
+                        requestAnimationFrame(frame);
+                    }
+                }());
+                
+                // Aguarda 2.5 segundos para o cliente ler e ver os fogos, depois entra no app
+                setTimeout(() => {
+                    document.getElementById('auth-screen').classList.add('fade-out');
+                    
+                    setTimeout(() => {
+                        document.getElementById('auth-screen').style.display = 'none';
+                        document.getElementById('main-platform').classList.remove('hidden');
+                        renderCatalog();
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }, 800);
+                }, 2200);
+
+            } else {
+                errorMsg.classList.remove('hidden');
+                errorMsg.innerText = "Por favor, insira o Login e Senha fornecidos.";
+            }
+        };
+
+        // RENDERIZAÇÃO ESTILO NETFLIX (Foco na usabilidade de clique)
+        function renderCatalog() {
+            const container = document.getElementById('catalog-container');
+            let html = '';
+
+            DRINK_CATALOG.forEach((category, catIndex) => {
+                html += `
+                <div class="px-4 md:px-12 relative z-20">
+                    <h3 class="text-white text-lg md:text-xl font-bold mb-3 md:mb-4 px-2">${category.categoryTitle}</h3>
+                    
+                    <div class="flex overflow-x-auto hide-scrollbar gap-3 md:gap-4 pb-8 px-2 snap-x snap-mandatory scroll-smooth">
+                        ${category.drinks.map(drink => {
+                            const isSelected = selectedDrinks.some(d => d.id === drink.id);
+                            const isOrdered = orderedDrinks.includes(drink.id);
+                            const rating = drinkRatings[drink.id] || 0;
+                            
+                            return `
+                            <div class="drink-card snap-center relative flex-shrink-0 w-[160px] md:w-[220px] h-[300px] md:h-[350px] rounded-xl overflow-hidden bg-gray-900 group ${isSelected ? 'selected-ring' : ''} ${isOrdered ? 'border border-green-500/50' : ''}">
+                                
+                                <img src="${drink.img}" alt="${drink.name}" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+                                <div class="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent"></div>
+                                
+                                <!-- ÁREA DO VÍDEO (Metade de cima) - Totalmente separada para não dar erro no celular -->
+                                <div class="absolute top-0 left-0 w-full h-[50%] z-10 flex flex-col items-center justify-center cursor-pointer" onclick="window.playVideo('${drink.id}')">
+                                    <div class="bg-black/40 backdrop-blur-sm border border-white/30 rounded-full p-3 md:p-4 text-white shadow-lg opacity-70 group-hover:opacity-100 transition-opacity">
+                                        <svg class="w-6 h-6 md:w-8 md:h-8 ml-1" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4l12 6-12 6z"/></svg>
+                                    </div>
+                                    <span class="text-[9px] uppercase tracking-widest mt-2 font-bold text-white/80 bg-black/40 px-2 py-1 rounded">Ver Trailer</span>
+                                </div>
+
+                                <!-- ÁREA DE INFORMAÇÕES E BOTÕES (Metade de baixo) -->
+                                <div class="absolute bottom-0 left-0 w-full p-3 z-20 flex flex-col gap-2">
+                                    <h4 class="brand-font text-white font-bold text-sm md:text-lg leading-tight drop-shadow-md text-center">${drink.name}</h4>
+                                    
+                                    <!-- SISTEMA DE AVALIAÇÃO (5 ESTRELAS) -->
+                                    <div class="flex justify-center items-center gap-1">
+                                        ${[1, 2, 3, 4, 5].map(star => `
+                                            <div onclick="event.stopPropagation(); window.rateDrink('${drink.id}', ${star})" class="cursor-pointer p-0.5 hover:scale-125 transition-transform">
+                                                <svg class="w-5 h-5 md:w-6 md:h-6 ${rating >= star ? 'text-gold fill-current drop-shadow-[0_0_5px_rgba(212,175,55,0.8)]' : 'text-gray-500 fill-none'} transition-colors" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+
+                                    <!-- BOTÃO DE AÇÃO GRANDE -->
+                                    ${isOrdered 
+                                        ? `<button onclick="event.stopPropagation(); window.showToast('Você já pediu este drink! Deguste e avalie acima.')" class="w-full mt-1 bg-green-600/90 text-white border border-green-400 py-2.5 rounded-md uppercase text-[10px] font-black tracking-widest flex items-center justify-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg> JÁ PEDIDO</button>`
+                                        : `<button onclick="event.stopPropagation(); window.toggleSelection('${drink.id}')" class="w-full mt-1 py-2.5 rounded-md uppercase text-[10px] font-black tracking-widest transition-colors flex items-center justify-center gap-1 ${isSelected ? 'bg-gold text-black shadow-[0_0_15px_rgba(212,175,55,0.5)]' : 'bg-white/10 text-white backdrop-blur-sm border border-white/20 hover:bg-white/30'}">
+                                            ${isSelected 
+                                                ? `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg> NA LISTA` 
+                                                : `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> ADICIONAR`
+                                            }
+                                           </button>`
+                                    }
+                                </div>
+                            </div>
+                        `}).join('')}
+                    </div>
+                </div>
+                `;
+            });
+
+            container.innerHTML = html;
+            updateCartCounter();
+        }
+
+        // LÓGICA DE SELEÇÃO
+        window.toggleSelection = function(drinkIdOrName) {
+            const drink = ALL_DRINKS.find(d => d.id === drinkIdOrName || d.name === drinkIdOrName);
+            if(!drink) return;
+
+            // Bloqueia adição se já foi pedido
+            if(orderedDrinks.includes(drink.id)) {
+                window.showToast("Este drink já foi pedido e está sendo feito!");
+                return;
+            }
+
+            const index = selectedDrinks.findIndex(d => d.id === drink.id);
+            
+            if(index > -1) {
+                selectedDrinks.splice(index, 1);
+                window.showToast(`${drink.name} removido da lista.`);
+            } else {
+                selectedDrinks.push(drink);
+                window.showToast(`${drink.name} adicionado à lista! 🍸`);
+            }
+
+            renderCatalog();
+            renderDrawerList();
+        };
+
+        // LÓGICA DE AVALIAÇÃO (ESTRELAS)
+        window.rateDrink = function(drinkId, stars) {
+            drinkRatings[drinkId] = stars;
+            window.showToast(`Avaliação: ${stars} estrela${stars > 1 ? 's' : ''}! Obrigado! 🌟`);
+            renderCatalog(); // Atualiza a tela para pintar as estrelas
+        };
+
+        function updateCartCounter() {
+            const counter = document.getElementById('cart-counter');
+            counter.innerText = selectedDrinks.length;
+            if(selectedDrinks.length > 0) {
+                counter.classList.add('scale-125', 'bg-red-600', 'text-white');
+                counter.classList.remove('bg-gold', 'text-black');
+                setTimeout(() => counter.classList.remove('scale-125'), 200);
+            } else {
+                counter.classList.remove('bg-red-600', 'text-white');
+                counter.classList.add('bg-gold', 'text-black');
+            }
+        }
+
+        // LÓGICA DO VÍDEO
+        window.playVideo = function(drinkIdOrName) {
+            let drink = ALL_DRINKS.find(d => d.id === drinkIdOrName || d.name === drinkIdOrName);
+            if(!drink && drinkIdOrName === 'moscow-mule-hero') drink = ALL_DRINKS.find(d => d.id === 'moscow-mule');
+            if(!drink) return;
+
+            const modal = document.getElementById('video-modal');
+            const wrapper = document.getElementById('video-wrapper');
+            
+            document.getElementById('video-title').innerText = drink.name;
+            document.getElementById('video-desc').innerText = drink.desc;
+            
+            const url = drink.video || "";
+            
+            // Lógica para detectar se é YouTube ou vídeo comum
+            if (url.includes('youtube.com') || url.includes('youtu.be')) {
+                const videoId = url.split('v=')[1]?.split('&')[0] || url.split('/').pop();
+                wrapper.innerHTML = `<iframe class="w-full h-full" src="https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+            } else {
+                wrapper.innerHTML = `<video class="w-full h-full object-cover" controls autoplay playsinline src="${url}"></video>`;
+            }
+            
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+        };
+
+        window.closeVideo = function() {
+            const modal = document.getElementById('video-modal');
+            const wrapper = document.getElementById('video-wrapper');
+            
+            modal.classList.add('opacity-0');
+            // Remove o conteúdo para parar o vídeo/iframe
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                wrapper.innerHTML = ""; 
+            }, 300);
+        };
+
+        // GAVETA (DRAWER)
+        let drawerOpen = false;
+        window.toggleDrawer = function() {
+            const drawer = document.getElementById('selection-drawer');
+            const content = document.getElementById('drawer-content');
+            
+            drawerOpen = !drawerOpen;
+            
+            if(drawerOpen) {
+                renderDrawerList();
+                drawer.classList.remove('hidden');
+                setTimeout(() => {
+                    drawer.classList.remove('opacity-0');
+                    content.classList.remove('translate-x-full');
+                }, 10);
+            } else {
+                drawer.classList.add('opacity-0');
+                content.classList.add('translate-x-full');
+                setTimeout(() => drawer.classList.add('hidden'), 400);
+            }
+        };
+
+        function renderDrawerList() {
+            const list = document.getElementById('selected-list');
+            
+            if(selectedDrinks.length === 0) {
+                list.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-40 text-gray-500 opacity-50">
+                        <svg class="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        <p class="text-xs uppercase font-bold tracking-widest text-center mt-2">Nenhum drink<br>selecionado</p>
+                    </div>`;
+                return;
+            }
+
+            list.innerHTML = selectedDrinks.map(drink => `
+                <div class="flex gap-4 p-3 bg-white/5 rounded-xl border border-white/5 hover:border-gold/30 transition-colors">
+                    <img src="${drink.img}" class="w-16 h-16 object-cover rounded-lg">
+                    <div class="flex-1 flex flex-col justify-center">
+                        <h4 class="brand-font text-white font-bold text-sm">${drink.name}</h4>
+                        <button onclick="window.toggleSelection('${drink.id}')" class="text-[10px] text-red-400 uppercase tracking-widest mt-1 hover:text-red-300 text-left">Remover</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ENVIAR PARA WHATSAPP
+        window.sendToWhatsApp = function() {
+            if(selectedDrinks.length === 0) {
+                window.showToast("Adicione pelo menos um drink na sua lista!");
+                return;
+            }
+
+            const userName = document.getElementById('vip-user').value || "Cliente VIP";
+            
+            let message = `🍸 *GMDRINKS - NOVO PEDIDO* 🍸\n\n`;
+            message += `Olá! Sou o(a) *${userName}* e acabei de escolher estes drinks para a próxima rodada:\n\n`;
+            
+            selectedDrinks.forEach((drink, index) => {
+                message += `${index + 1}. *${drink.name}*\n`;
+            });
+            
+            message += `\nPodemos preparar?`;
+
+            const encodedMessage = encodeURIComponent(message);
+            
+            // TRANSFORMA OS DRINKS SELECIONADOS EM "JÁ PEDIDOS"
+            selectedDrinks.forEach(drink => {
+                if(!orderedDrinks.includes(drink.id)) {
+                    orderedDrinks.push(drink.id);
+                }
+            });
+            
+            // ESVAZIA A LISTA ATUAL (CARRINHO)
+            selectedDrinks = [];
+            
+            // ATUALIZA A TELA (Os drinks ficarão verdes com "JÁ PEDIDO")
+            renderCatalog();
+            renderDrawerList();
+            window.toggleDrawer(); 
+            window.showToast("Drinks registrados na sua mesa!");
+
+            // ABRE O WHATSAPP DO MIXOLOGISTA
+            window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodedMessage}`, '_blank');
+        };
+
+        // Navbar Scroll Effect
+        window.addEventListener('scroll', () => {
+            const navbar = document.getElementById('navbar');
+            if (window.scrollY > 50) {
+                navbar.classList.add('bg-black');
+                navbar.classList.remove('bg-gradient-to-b', 'from-black/95', 'to-transparent');
+            } else {
+                navbar.classList.remove('bg-black');
+                navbar.classList.add('bg-gradient-to-b', 'from-black/95', 'to-transparent');
+            }
+        });
+    </script>
+</body>
+</html>
