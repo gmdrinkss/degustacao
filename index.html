@@ -48,7 +48,7 @@
             transform-origin: center center;
             will-change: transform;
         }
-        /* No desktop, o hover expande o card. Em telas touch, a própria engine lida melhor com isso. */
+        /* No desktop, o hover expande o card. */
         @media (hover: hover) and (pointer: fine) {
             .drink-card:hover {
                 transform: scale(1.10) translateY(-5px);
@@ -63,7 +63,6 @@
         #video-modal, #selection-drawer { transition: opacity 0.3s ease; }
         #drawer-content { transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
 
-        /* NOVO: Efeito Folha de Ouro Animada */
         @keyframes shine {
             0% { background-position: -200% center; }
             100% { background-position: 200% center; }
@@ -118,7 +117,6 @@
         <nav class="fixed top-0 w-full z-40 bg-gradient-to-b from-black/95 to-transparent pt-6 pb-10 px-4 md:px-12 flex justify-between items-center transition-all duration-300" id="navbar">
             <h1 class="brand-font text-2xl md:text-3xl text-gold tracking-widest uppercase">GMDrinks</h1>
             <div class="flex items-center gap-4">
-                <!-- NOVO: Botão de Compartilhar/QR Code -->
                 <button onclick="window.showQRCode()" class="flex items-center justify-center p-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 transition-colors backdrop-blur-md" title="Mostrar QR Code do Menu">
                     <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
                 </button>
@@ -164,14 +162,13 @@
         </main>
     </div>
 
-    <!-- 3. MODAL DE VÍDEO (Estilo Netflix Player) -->
+    <!-- 3. MODAL DE VÍDEO -->
     <div id="video-modal" class="fixed inset-0 z-[150] bg-black/95 backdrop-blur-sm hidden flex-col items-center justify-center p-4 opacity-0 transition-opacity duration-300">
         <button onclick="window.closeVideo()" class="absolute top-6 right-6 md:top-10 md:right-10 text-white hover:text-gold transition-colors z-10">
             <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
         
         <div id="video-wrapper" class="w-full max-w-5xl relative aspect-video bg-gray-900 rounded-xl overflow-hidden shadow-[0_0_50px_rgba(212,175,55,0.2)]">
-            <!-- O conteúdo será injetado pelo JavaScript (Vídeo ou Iframe) -->
         </div>
         
         <div class="mt-6 text-center">
@@ -180,7 +177,7 @@
         </div>
     </div>
 
-    <!-- 4. GAVETA DE SELEÇÃO (Minha Lista & Envio para WhatsApp) -->
+    <!-- 4. GAVETA DE SELEÇÃO -->
     <div id="selection-drawer" class="fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm hidden opacity-0">
         <div id="drawer-content" class="absolute top-0 right-0 h-full w-full md:w-[450px] glass-panel shadow-2xl border-l border-white/10 p-6 flex flex-col translate-x-full">
             
@@ -195,7 +192,6 @@
             </div>
 
             <div id="selected-list" class="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
-                <!-- Drinks selecionados renderizados aqui -->
             </div>
 
             <div class="mt-8 pt-6 border-t border-white/10">
@@ -207,7 +203,7 @@
         </div>
     </div>
 
-    <!-- 5. MODAL DE QR CODE (NOVO) -->
+    <!-- 5. MODAL DE QR CODE -->
     <div id="qr-modal" class="fixed inset-0 z-[200] bg-black/95 backdrop-blur-sm hidden flex-col items-center justify-center p-4 opacity-0 transition-opacity duration-300">
         <button onclick="window.closeQRCode()" class="absolute top-6 right-6 md:top-10 md:right-10 text-white hover:text-gold transition-colors z-10">
             <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -229,11 +225,8 @@
     </div>
 
     <script>
-        // CONFIGURAÇÃO: Seu WhatsApp Oficial
         const WHATSAPP_NUMBER = "5531983684231"; 
 
-        // BANCO DE DADOS COMPLETO DE DRINKS
-        // NOTA: Para trocar o vídeo, basta alterar o link em "video:"
         const DRINK_CATALOG = [
              {
                 categoryTitle: "A Alta Coquetelaria (Premium)",
@@ -278,18 +271,16 @@
             }
         ];
 
-        // Flat array para buscas fáceis
         const ALL_DRINKS = DRINK_CATALOG.reduce((acc, cat) => acc.concat(cat.drinks), []);
         let selectedDrinks = []; 
-        let orderedDrinks = []; // NOVO: Armazena o que já foi pedido e enviado
-        let drinkRatings = {};  // NOVO: Armazena as notas (estrelas) de cada drink
-        let loggedInUser = "Cliente VIP"; // CORREÇÃO: Salva o nome para não perder após animação
+        let orderedDrinks = [];
+        let drinkRatings = {}; 
+        let loggedInUser = "Cliente VIP"; 
 
-        // NOVO: Variáveis globais para o sistema de Preview (Estilo Netflix)
         let previewTimer = null;
         let activePreviewId = null;
+        let magicScrollObserver = null; // NOVO: Observador Mágico
 
-        // TOAST NOTIFICATION (Aviso de "Adicionado com sucesso")
         window.showToast = function(message) {
             let toast = document.getElementById('toast-msg');
             if(!toast) {
@@ -306,22 +297,13 @@
         window.showQRCode = function() {
             const modal = document.getElementById('qr-modal');
             const qrImg = document.getElementById('qr-code-img');
-            
-            // Pega a URL atual onde o site está hospedado
             let currentUrl = window.location.href;
-            
-            // Fallback caso esteja rodando localmente/preview (só para não dar erro visual)
             if(currentUrl.includes('file://') || currentUrl.includes('blob:')) {
                 currentUrl = "https://seusite.com/gmdrinks"; 
             }
-
-            // Gera o QR code dinamicamente usando uma API gratuita baseada na URL atual
             qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(currentUrl)}&color=050505&bgcolor=ffffff`;
-            
             modal.classList.remove('hidden');
             setTimeout(() => modal.classList.remove('opacity-0'), 10);
-            
-            // Se a gaveta de seleção estiver aberta, fecha ela para mostrar o QR code limpo
             if(drawerOpen) window.toggleDrawer();
         };
 
@@ -336,14 +318,11 @@
             if(currentUrl.includes('file://') || currentUrl.includes('blob:')) {
                 currentUrl = "https://seusite.com/gmdrinks"; 
             }
-
-            // Tenta copiar para a área de transferência do usuário
             if (navigator.clipboard && window.isSecureContext) {
                 navigator.clipboard.writeText(currentUrl).then(() => {
                     window.showToast("Link copiado! Compartilhe com os convidados.");
                 });
             } else {
-                // Fallback para navegadores mais antigos ou sem HTTPS
                 const textArea = document.createElement("textarea");
                 textArea.value = currentUrl;
                 textArea.style.position = "fixed";
@@ -360,7 +339,6 @@
             }
         };
 
-        // SISTEMA DE LOGIN
         window.loginVIP = function() {
             const user = document.getElementById('vip-user').value;
             const pass = document.getElementById('vip-pass').value;
@@ -368,11 +346,8 @@
 
             if(user.length >= 2 && pass.length >= 2) {
                 errorMsg.classList.add('hidden');
-                
-                // CORREÇÃO: Salva o nome na memória antes de destruir o input do HTML
                 loggedInUser = user;
                 
-                // NOVO: Animação luxuosa de Boas-Vindas
                 const panel = document.querySelector('.glass-panel');
                 panel.innerHTML = `
                     <div class="flex flex-col items-center justify-center w-full min-h-[160px]">
@@ -385,35 +360,17 @@
                         <span class="text-3xl mt-5 block">🥂</span>
                     </div>`;
                 
-                // Dispara os fogos de artifício luxuosos (Dourado e Branco)
                 var duration = 2.5 * 1000;
                 var end = Date.now() + duration;
 
                 (function frame() {
-                    confetti({
-                        particleCount: 7,
-                        angle: 60,
-                        spread: 55,
-                        origin: { x: 0 },
-                        colors: ['#d4af37', '#f9d976', '#ffffff']
-                    });
-                    confetti({
-                        particleCount: 7,
-                        angle: 120,
-                        spread: 55,
-                        origin: { x: 1 },
-                        colors: ['#d4af37', '#f9d976', '#ffffff']
-                    });
-
-                    if (Date.now() < end) {
-                        requestAnimationFrame(frame);
-                    }
+                    confetti({ particleCount: 7, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#d4af37', '#f9d976', '#ffffff'] });
+                    confetti({ particleCount: 7, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#d4af37', '#f9d976', '#ffffff'] });
+                    if (Date.now() < end) requestAnimationFrame(frame);
                 }());
                 
-                // Aguarda 2.5 segundos para o cliente ler e ver os fogos, depois entra no app
                 setTimeout(() => {
                     document.getElementById('auth-screen').classList.add('fade-out');
-                    
                     setTimeout(() => {
                         document.getElementById('auth-screen').style.display = 'none';
                         document.getElementById('main-platform').classList.remove('hidden');
@@ -428,12 +385,11 @@
             }
         };
 
-        // RENDERIZAÇÃO ESTILO NETFLIX (Foco na usabilidade de clique)
         function renderCatalog() {
             const container = document.getElementById('catalog-container');
             let html = '';
 
-            DRINK_CATALOG.forEach((category, catIndex) => {
+            DRINK_CATALOG.forEach((category) => {
                 html += `
                 <div class="px-4 md:px-12 relative z-20">
                     <h3 class="text-white text-lg md:text-xl font-bold mb-3 md:mb-4 px-2">${category.categoryTitle}</h3>
@@ -443,26 +399,23 @@
                             const isSelected = selectedDrinks.some(d => d.id === drink.id);
                             const isOrdered = orderedDrinks.includes(drink.id);
                             const rating = drinkRatings[drink.id] || 0;
+                            // Removemos espaços vazios que podem vir no link do JSON
+                            const videoUrlTrimmed = drink.video.trim();
                             
                             return `
+                            <!-- AQUI REMOVEMOS OS ONTOUCH E COLOCAMOS DATA-ATTRIBUTES PARA O OBSERVER LER -->
                             <div class="drink-card snap-center relative flex-shrink-0 w-[160px] md:w-[220px] h-[300px] md:h-[350px] rounded-xl overflow-hidden bg-gray-900 group ${isSelected ? 'selected-ring' : ''} ${isOrdered ? 'border border-green-500/50' : ''}"
-                                 onmouseenter="window.startPreview('${drink.id}', '${drink.video}')"
-                                 onmouseleave="window.stopPreview('${drink.id}')"
-                                 ontouchstart="window.startPreview('${drink.id}', '${drink.video}')"
-                                 ontouchend="window.stopPreview('${drink.id}')"
-                                 ontouchcancel="window.stopPreview('${drink.id}')"
-                                 ontouchmove="window.stopPreview('${drink.id}')">
+                                 data-id="${drink.id}"
+                                 data-video="${videoUrlTrimmed}"
+                                 onmouseenter="if(window.innerWidth > 768) window.startPreview('${drink.id}', '${videoUrlTrimmed}')"
+                                 onmouseleave="if(window.innerWidth > 768) window.stopPreview('${drink.id}')">
                                 
-                                <!-- Preview de Vídeo (Fundo) -->
                                 <div id="preview-box-${drink.id}" class="absolute inset-0 z-0 bg-black"></div>
 
-                                <!-- Imagem Poster -->
                                 <img id="poster-${drink.id}" src="${drink.img}" alt="${drink.name}" class="absolute inset-0 z-10 w-full h-full object-cover transition-all duration-700 group-hover:scale-110">
                                 
-                                <!-- Gradiente Escuro -->
                                 <div class="absolute inset-0 z-20 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none"></div>
                                 
-                                <!-- ÁREA DO VÍDEO (Metade de cima) - Totalmente separada para não dar erro no celular -->
                                 <div class="absolute top-0 left-0 w-full h-[50%] z-30 flex flex-col items-center justify-center cursor-pointer" onclick="window.playVideo('${drink.id}')">
                                     <div class="bg-black/40 backdrop-blur-sm border border-white/30 rounded-full p-3 md:p-4 text-white shadow-lg opacity-70 group-hover:opacity-100 transition-opacity">
                                         <svg class="w-6 h-6 md:w-8 md:h-8 ml-1" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4l12 6-12 6z"/></svg>
@@ -470,11 +423,9 @@
                                     <span class="text-[9px] uppercase tracking-widest mt-2 font-bold text-white/80 bg-black/40 px-2 py-1 rounded shadow-lg backdrop-blur-sm">Ver Trailer</span>
                                 </div>
 
-                                <!-- ÁREA DE INFORMAÇÕES E BOTÕES (Metade de baixo) -->
                                 <div class="absolute bottom-0 left-0 w-full p-3 z-40 flex flex-col gap-2">
                                     <h4 class="brand-font text-white font-bold text-sm md:text-lg leading-tight drop-shadow-md text-center">${drink.name}</h4>
                                     
-                                    <!-- SISTEMA DE AVALIAÇÃO (5 ESTRELAS) -->
                                     <div class="flex justify-center items-center gap-1">
                                         ${[1, 2, 3, 4, 5].map(star => `
                                             <div onclick="event.stopPropagation(); window.rateDrink('${drink.id}', ${star})" class="cursor-pointer p-0.5 hover:scale-125 transition-transform">
@@ -483,7 +434,6 @@
                                         `).join('')}
                                     </div>
 
-                                    <!-- BOTÃO DE AÇÃO GRANDE -->
                                     ${isOrdered 
                                         ? `<button onclick="event.stopPropagation(); window.showToast('Você já pediu este drink! Deguste e avalie acima.')" class="w-full mt-1 bg-green-600/90 text-white border border-green-400 py-2.5 rounded-md uppercase text-[10px] font-black tracking-widest flex items-center justify-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg> JÁ PEDIDO</button>`
                                         : `<button onclick="event.stopPropagation(); window.toggleSelection('${drink.id}')" class="w-full mt-1 py-2.5 rounded-md uppercase text-[10px] font-black tracking-widest transition-colors flex items-center justify-center gap-1 ${isSelected ? 'bg-gold text-black shadow-[0_0_15px_rgba(212,175,55,0.5)]' : 'bg-white/10 text-white backdrop-blur-sm border border-white/20 hover:bg-white/30'}">
@@ -503,21 +453,54 @@
 
             container.innerHTML = html;
             updateCartCounter();
+            
+            // NOVO: Inicializa a detecção de scroll no mobile logo após renderizar
+            setTimeout(initMagicScroll, 150);
         }
 
-        // LÓGICA DE SELEÇÃO
+        // NOVO: DETECÇÃO DE SCROLL MÁGICA PARA MOBILE
+        function initMagicScroll() {
+            // No desktop (telas grandes), o mouse hover cuida disso
+            if (window.innerWidth > 768) return; 
+
+            if (magicScrollObserver) magicScrollObserver.disconnect();
+
+            // Configuração do "Radar": Cria uma zona invisível no centro da tela
+            const options = {
+                root: null,
+                // Uma margem negativa força o observer a considerar "visível" apenas o que está no miolo da tela
+                rootMargin: '0px -25% 0px -25%', 
+                threshold: 0.6 // 60% do card precisa estar dentro do "miolo"
+            };
+
+            magicScrollObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    const id = entry.target.getAttribute('data-id');
+                    const videoUrl = entry.target.getAttribute('data-video');
+
+                    if (entry.isIntersecting) {
+                        window.startPreview(id, videoUrl);
+                    } else {
+                        window.stopPreview(id);
+                    }
+                });
+            }, options);
+
+            document.querySelectorAll('.drink-card').forEach(card => {
+                magicScrollObserver.observe(card);
+            });
+        }
+
         window.toggleSelection = function(drinkIdOrName) {
             const drink = ALL_DRINKS.find(d => d.id === drinkIdOrName || d.name === drinkIdOrName);
             if(!drink) return;
 
-            // Bloqueia adição se já foi pedido
             if(orderedDrinks.includes(drink.id)) {
                 window.showToast("Este drink já foi pedido e está sendo feito!");
                 return;
             }
 
             const index = selectedDrinks.findIndex(d => d.id === drink.id);
-            
             if(index > -1) {
                 selectedDrinks.splice(index, 1);
                 window.showToast(`${drink.name} removido da lista.`);
@@ -525,24 +508,21 @@
                 selectedDrinks.push(drink);
                 window.showToast(`${drink.name} adicionado à lista! 🍸`);
             }
-
             renderCatalog();
             renderDrawerList();
         };
 
-        // LÓGICA DE AVALIAÇÃO (ESTRELAS)
         window.rateDrink = function(drinkId, stars) {
             drinkRatings[drinkId] = stars;
             window.showToast(`Avaliação: ${stars} estrela${stars > 1 ? 's' : ''}! Obrigado! 🌟`);
-            renderCatalog(); // Atualiza a tela para pintar as estrelas
+            renderCatalog(); 
         };
 
-        // NOVO: LÓGICA DE PREVIEW (Estilo Netflix) no Hover/Press
         window.startPreview = function(id, videoUrl) {
             if (activePreviewId === id) return;
             
             clearTimeout(previewTimer);
-            // Delay de 600ms: Se for só um toque rápido ou scroll, não dispara o vídeo
+            // Delay leve para não piscar vários vídeos ao rolar muito rápido
             previewTimer = setTimeout(() => {
                 activePreviewId = id;
                 const previewBox = document.getElementById(`preview-box-${id}`);
@@ -550,32 +530,29 @@
                 
                 if(!previewBox || !poster) return;
 
-                // Injeta o vídeo dinamicamente apenas quando necessário para economizar dados
                 let mediaHtml = '';
                 if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
                     const videoId = videoUrl.split('v=')[1]?.split('&')[0] || videoUrl.split('/').pop();
-                    // Scale-150 esconde as bordas pretas indesejadas do iframe do youtube
                     mediaHtml = `<iframe class="w-full h-full object-cover pointer-events-none scale-150" src="https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${videoId}&modestbranding=1&showinfo=0" frameborder="0" allow="autoplay; encrypted-media"></iframe>`;
                 } else {
                     mediaHtml = `<video class="w-full h-full object-cover pointer-events-none" autoplay muted loop playsinline><source src="${videoUrl}" type="video/mp4"></video>`;
                 }
                 
                 previewBox.innerHTML = mediaHtml;
-                poster.style.opacity = '0'; // Faz o fade suave escondendo a imagem
+                poster.style.opacity = '0'; 
                 
             }, 600); 
         };
 
         window.stopPreview = function(id) {
-            clearTimeout(previewTimer); // Cancela caso o usuário tire o dedo antes de dar 600ms
+            clearTimeout(previewTimer); 
             
             if (activePreviewId === id) {
                 const previewBox = document.getElementById(`preview-box-${id}`);
                 const poster = document.getElementById(`poster-${id}`);
                 
-                if(poster) poster.style.opacity = '1'; // Retorna a imagem
+                if(poster) poster.style.opacity = '1'; 
                 
-                // Aguarda 500ms para o fade-in da imagem terminar antes de destruir o vídeo do DOM
                 setTimeout(() => {
                     if (previewBox && activePreviewId !== id) {
                         previewBox.innerHTML = '';
@@ -599,7 +576,6 @@
             }
         }
 
-        // LÓGICA DO VÍDEO
         window.playVideo = function(drinkIdOrName) {
             let drink = ALL_DRINKS.find(d => d.id === drinkIdOrName || d.name === drinkIdOrName);
             if(!drink && drinkIdOrName === 'moscow-mule-hero') drink = ALL_DRINKS.find(d => d.id === 'moscow-mule');
@@ -611,9 +587,8 @@
             document.getElementById('video-title').innerText = drink.name;
             document.getElementById('video-desc').innerText = drink.desc;
             
-            const url = drink.video || "";
+            const url = drink.video.trim() || "";
             
-            // Lógica para detectar se é YouTube ou vídeo comum
             if (url.includes('youtube.com') || url.includes('youtu.be')) {
                 const videoId = url.split('v=')[1]?.split('&')[0] || url.split('/').pop();
                 wrapper.innerHTML = `<iframe class="w-full h-full" src="https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
@@ -630,14 +605,12 @@
             const wrapper = document.getElementById('video-wrapper');
             
             modal.classList.add('opacity-0');
-            // Remove o conteúdo para parar o vídeo/iframe
             setTimeout(() => {
                 modal.classList.add('hidden');
                 wrapper.innerHTML = ""; 
             }, 300);
         };
 
-        // GAVETA (DRAWER)
         let drawerOpen = false;
         window.toggleDrawer = function() {
             const drawer = document.getElementById('selection-drawer');
@@ -682,16 +655,13 @@
             `).join('');
         }
 
-        // ENVIAR PARA WHATSAPP
         window.sendToWhatsApp = function() {
             if(selectedDrinks.length === 0) {
                 window.showToast("Adicione pelo menos um drink na sua lista!");
                 return;
             }
 
-            // CORREÇÃO: Usa a variável em memória em vez de buscar o input apagado
             const userName = loggedInUser;
-            
             let message = `🍸 *GMDRINKS - NOVO PEDIDO* 🍸\n\n`;
             message += `Olá! Sou o(a) *${userName}* e acabei de escolher estes drinks para a próxima rodada:\n\n`;
             
@@ -704,35 +674,28 @@
             const encodedMessage = encodeURIComponent(message);
             const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodedMessage}`;
             
-            // 1. ABRE O WHATSAPP PRIMEIRO (Evita bloqueios de navegadores mobile como o Safari)
             try {
                 const newWindow = window.open(whatsappUrl, '_blank');
                 if(!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-                    window.location.href = whatsappUrl; // Fallback se o popup for bloqueado
+                    window.location.href = whatsappUrl; 
                 }
             } catch (e) {
                 window.location.href = whatsappUrl;
             }
             
-            // 2. DEPOIS FAZ AS ATUALIZAÇÕES VISUAIS DA TELA
-            // Transforma os drinks selecionados em "já pedidos"
             selectedDrinks.forEach(drink => {
                 if(!orderedDrinks.includes(drink.id)) {
                     orderedDrinks.push(drink.id);
                 }
             });
             
-            // Esvazia a lista atual (Carrinho)
             selectedDrinks = [];
-            
-            // Atualiza a tela
             renderCatalog();
             renderDrawerList();
             window.toggleDrawer(); 
             window.showToast("Drinks registrados na sua mesa!");
         };
 
-        // Navbar Scroll Effect
         window.addEventListener('scroll', () => {
             const navbar = document.getElementById('navbar');
             if (window.scrollY > 50) {
