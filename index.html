@@ -283,6 +283,7 @@
         let selectedDrinks = []; 
         let orderedDrinks = []; // NOVO: Armazena o que já foi pedido e enviado
         let drinkRatings = {};  // NOVO: Armazena as notas (estrelas) de cada drink
+        let loggedInUser = "Cliente VIP"; // CORREÇÃO: Salva o nome para não perder após animação
 
         // TOAST NOTIFICATION (Aviso de "Adicionado com sucesso")
         window.showToast = function(message) {
@@ -364,14 +365,21 @@
             if(user.length >= 2 && pass.length >= 2) {
                 errorMsg.classList.add('hidden');
                 
+                // CORREÇÃO: Salva o nome na memória antes de destruir o input do HTML
+                loggedInUser = user;
+                
                 // NOVO: Animação luxuosa de Boas-Vindas
                 const panel = document.querySelector('.glass-panel');
                 panel.innerHTML = `
-                    <h2 class="brand-font text-3xl md:text-5xl text-gold text-center animate-pulse drop-shadow-[0_0_20px_rgba(212,175,55,0.6)] leading-relaxed">
-                        Bem-vindos,<br>
-                        <span class="text-white text-4xl md:text-6xl mt-2 block tracking-widest uppercase">${user}</span>
-                        <span class="text-2xl mt-4 block">🥂</span>
-                    </h2>`;
+                    <div class="flex flex-col items-center justify-center w-full min-h-[160px]">
+                        <h2 class="brand-font text-3xl md:text-4xl text-gold text-center animate-pulse drop-shadow-[0_0_20px_rgba(212,175,55,0.6)] mb-3">
+                            Bem-vindos,
+                        </h2>
+                        <h3 class="text-white text-xl sm:text-2xl md:text-3xl font-black tracking-widest uppercase text-center break-words w-full leading-snug drop-shadow-md">
+                            ${user}
+                        </h3>
+                        <span class="text-3xl mt-5 block">🥂</span>
+                    </div>`;
                 
                 // Dispara os fogos de artifício luxuosos (Dourado e Branco)
                 var duration = 2.5 * 1000;
@@ -443,7 +451,7 @@
                                     <div class="bg-black/40 backdrop-blur-sm border border-white/30 rounded-full p-3 md:p-4 text-white shadow-lg opacity-70 group-hover:opacity-100 transition-opacity">
                                         <svg class="w-6 h-6 md:w-8 md:h-8 ml-1" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4l12 6-12 6z"/></svg>
                                     </div>
-                                    <span class="text-[9px] uppercase tracking-widest mt-2 font-bold text-white/80 bg-black/40 px-2 py-1 rounded">Ver Trailler</span>
+                                    <span class="text-[9px] uppercase tracking-widest mt-2 font-bold text-white/80 bg-black/40 px-2 py-1 rounded">Ver Trailer</span>
                                 </div>
 
                                 <!-- ÁREA DE INFORMAÇÕES E BOTÕES (Metade de baixo) -->
@@ -616,7 +624,8 @@
                 return;
             }
 
-            const userName = document.getElementById('vip-user').value || "Cliente VIP";
+            // CORREÇÃO: Usa a variável em memória em vez de buscar o input apagado
+            const userName = loggedInUser;
             
             let message = `🍸 *GMDRINKS - NOVO PEDIDO* 🍸\n\n`;
             message += `Olá! Sou o(a) *${userName}* e acabei de escolher estes drinks para a próxima rodada:\n\n`;
@@ -628,25 +637,34 @@
             message += `\nPodemos preparar?`;
 
             const encodedMessage = encodeURIComponent(message);
+            const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodedMessage}`;
             
-            // TRANSFORMA OS DRINKS SELECIONADOS EM "JÁ PEDIDOS"
+            // 1. ABRE O WHATSAPP PRIMEIRO (Evita bloqueios de navegadores mobile como o Safari)
+            try {
+                const newWindow = window.open(whatsappUrl, '_blank');
+                if(!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+                    window.location.href = whatsappUrl; // Fallback se o popup for bloqueado
+                }
+            } catch (e) {
+                window.location.href = whatsappUrl;
+            }
+            
+            // 2. DEPOIS FAZ AS ATUALIZAÇÕES VISUAIS DA TELA
+            // Transforma os drinks selecionados em "já pedidos"
             selectedDrinks.forEach(drink => {
                 if(!orderedDrinks.includes(drink.id)) {
                     orderedDrinks.push(drink.id);
                 }
             });
             
-            // ESVAZIA A LISTA ATUAL (CARRINHO)
+            // Esvazia a lista atual (Carrinho)
             selectedDrinks = [];
             
-            // ATUALIZA A TELA (Os drinks ficarão verdes com "JÁ PEDIDO")
+            // Atualiza a tela
             renderCatalog();
             renderDrawerList();
             window.toggleDrawer(); 
             window.showToast("Drinks registrados na sua mesa!");
-
-            // ABRE O WHATSAPP DO MIXOLOGISTA
-            window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodedMessage}`, '_blank');
         };
 
         // Navbar Scroll Effect
