@@ -662,14 +662,28 @@
             }
 
             const userName = loggedInUser;
-            let message = `🍸 *GMDRINKS - NOVO PEDIDO* 🍸\n\n`;
+            /* Usando códigos Unicode (\u...) para evitar bugs de caracteres  no WhatsApp */
+            let message = `\uD83C\uDF78 *GMDRINKS - NOVO PEDIDO* \uD83C\uDF78\n\n`;
             message += `Olá! Sou o(a) *${userName}* e acabei de escolher estes drinks para a próxima rodada:\n\n`;
             
             selectedDrinks.forEach((drink, index) => {
                 message += `${index + 1}. *${drink.name}*\n`;
             });
             
-            message += `\nPodemos preparar?`;
+            const ratedDrinksIds = Object.keys(drinkRatings);
+            if(ratedDrinksIds.length > 0) {
+                message += `\n\u2B50 *Minhas Avaliações:*\n`;
+                ratedDrinksIds.forEach(drinkId => {
+                    const drinkInfo = ALL_DRINKS.find(d => d.id === drinkId);
+                    if(drinkInfo) {
+                        const stars = drinkRatings[drinkId];
+                        const starEmoji = '\u2B50'.repeat(stars); // \u2B50 é o emoji ⭐
+                        message += `- ${drinkInfo.name}: ${starEmoji}\n`;
+                    }
+                });
+            }
+
+            message += `\nEscolhemos esse drink para a proxima Rodada!`;
 
             const encodedMessage = encodeURIComponent(message);
             const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodedMessage}`;
